@@ -52,11 +52,17 @@ describe('Hacker Stories', () => {
 
       cy.wait('@getNewTermStories')
 
+      cy.getLocalStorage('search')
+        .should('be.equal', newTerm)
+
       cy.get(`button:contains(${initialTerm})`)
         .should('be.visible')
         .click()
 
         cy.wait('@getStories')
+
+        cy.getLocalStorage('search')
+          .should('be.equal', initialTerm)
 
       cy.get('.item').should('have.length', 20)
       cy.get('.item')
@@ -232,6 +238,9 @@ describe('Hacker Stories', () => {
             .type(`${newTerm}{enter}`)
     
           cy.wait('@getStories')
+
+          cy.getLocalStorage('search')
+            .should('be.equal', newTerm)
     
           cy.get('.item').should('have.length', 2)
           cy.get(`button:contains(${initialTerm})`)
@@ -245,6 +254,9 @@ describe('Hacker Stories', () => {
             .click()
     
           cy.wait('@getStories')
+
+          cy.getLocalStorage('search')
+            .should('be.equal', newTerm)
     
           cy.get('.item').should('have.length', 2)
           cy.get(`button:contains(${initialTerm})`)
@@ -262,14 +274,22 @@ describe('Hacker Stories', () => {
             ).as('getRandomStories')
     
             Cypress._.times(6, () => {
+              const randomStorie = faker.random.word()
+
               cy.get('#search')
                 .clear()
-                .type(`${faker.random.word()}{enter}`)
+                .type(`${randomStorie}{enter}`)
               cy.wait('@getRandomStories')
+
+              cy.getLocalStorage('search')
+                .should('be.equal', randomStorie)
             })
     
-            cy.get('.last-searches button')
-              .should('have.length', 5)
+            cy.get('.last-searches')
+              .within(() => {
+                cy.get('button')
+                  .should('have.length', 5)
+              })
           })
        })
     })
@@ -304,4 +324,22 @@ context('Errors', () => {
     cy.get('p:contains(Something went wrong ...)')
       .should('be.visible')
   })
+})
+
+it('shows a "Loading ..." state before showing the results', () => {
+  cy.intercept(
+    'GET',
+    '**/search**',
+    {
+      delay: 1000,
+      fixture: 'stories'
+    }
+  ).as('getDelayedStories')
+
+  cy.visit('/')
+
+  cy.assertLoadingIsShownAndHidden()
+  cy.wait('@getDelayedStories')
+
+  cy.get('.item').should('have.length', 2)
 })
